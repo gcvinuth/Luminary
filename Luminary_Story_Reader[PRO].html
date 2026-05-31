@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Luminary">
+<meta name="theme-color" content="#080a0e">
+<title>Luminary — Story Reader Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&family=Josefin+Sans:wght@200;300;400;500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── Root: Midnight Theme ── */
+:root {
+  --bg:#080a0e; --bg2:#0e1118; --bg3:#141820; --surface:#1a2030;
+  --border:rgba(180,160,120,0.12); --border2:rgba(180,160,120,0.25);
+  --gold:#c9a84c; --gold2:#e8c97a; --gold-dim:rgba(201,168,76,0.15);
+  --text:#e8e0d0; --text2:#a09880; --text3:#5a5245; --active:rgba(201,168,76,0.08);
+  --font-title:'Cinzel',serif; --font-body:'Cormorant Garamond',serif; --font-ui:'Josefin Sans',sans-serif;
+  --spd:0.3s;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px); --safe-right:env(safe-area-inset-right,0px);
+}
+/* ── Sepia Theme ── */
+.theme-sepia {
+  --bg:#1c1508; --bg2:#231b0d; --bg3:#2c2210; --surface:#36290f;
+  --border:rgba(200,170,100,0.15); --border2:rgba(200,170,100,0.3);
+  --gold:#d4a84c; --gold2:#f0c96a; --gold-dim:rgba(212,168,76,0.15);
+  --text:#f5ead0; --text2:#b8a070; --text3:#6a5a35; --active:rgba(212,168,76,0.1);
+}
+/* ── E-Ink Theme ── */
+.theme-eink {
+  --bg:#f4f1ec; --bg2:#ede9e0; --bg3:#e2ddd4;
+  --surface:#d4cec5; --border:rgba(0,0,0,0.1); --border2:rgba(0,0,0,0.22);
+  --gold:#1a1a1a; --gold2:#000; --gold-dim:rgba(0,0,0,0.06);
+  --text:#111; --text2:#555; --text3:#999; --active:rgba(0,0,0,0.05);
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;touch-action:manipulation;transition:background 0.4s,color 0.4s;font-family:var(--font-body)}
+#app{display:flex;height:100dvh;position:relative;overflow:hidden}
+
+/* ── Sidebar Overlay ── */
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:19;opacity:0;transition:opacity var(--spd)}
+#sidebar-overlay.show{opacity:1}
+
+/* ── Sidebar ── */
+#sidebar{
+  width:300px;min-width:300px;background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;transition:transform var(--spd) cubic-bezier(.4,0,.2,1);
+  z-index:20;flex-shrink:0
+}
+@media(max-width:640px){
+  #sidebar-overlay{display:block;pointer-events:none}
+  #sidebar-overlay.show{pointer-events:all}
+  #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);
+    box-shadow:4px 0 32px rgba(0,0,0,0.7);padding-top:var(--safe-top);max-width:100vw}
+  #sidebar.open{transform:translateX(0)}
+}
+@media(min-width:641px){
+  #sidebar{transform:translateX(0)!important}
+  #sidebar.collapsed{transform:translateX(-300px)!important;margin-right:-300px}
+}
+
+.sidebar-header{padding:24px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.logo-row{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--font-title);font-size:20px;letter-spacing:0.18em;color:var(--gold);text-transform:uppercase}
+.logo-sub{font-family:var(--font-ui);font-size:9px;letter-spacing:0.3em;color:var(--text3);text-transform:uppercase;margin-top:3px}
+.pro-badge{font-family:var(--font-ui);font-size:8px;border:1px solid var(--gold);color:var(--gold);padding:2px 6px;border-radius:3px;letter-spacing:0.1em;text-transform:uppercase}
+
+.lib-controls{display:flex;gap:8px;padding:12px 20px 6px;border-bottom:1px solid var(--border)}
+.lib-btn{
+  flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  color:var(--text2);font-family:var(--font-ui);font-size:9px;padding:7px;cursor:pointer;
+  letter-spacing:0.1em;text-transform:uppercase;transition:all 0.2s;
+  display:flex;align-items:center;justify-content:center;gap:4px;min-height:36px
+}
+.lib-btn:hover,.lib-btn:active{border-color:var(--gold);color:var(--gold)}
+
+/* ── Chapter Drawer ── */
+#chapter-drawer{background:var(--bg3);border-bottom:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height 0.3s ease;flex-shrink:0}
+#chapter-drawer.open{max-height:220px}
+#chapter-list{overflow-y:auto;max-height:220px;padding:6px 0}
+#chapter-list::-webkit-scrollbar{width:3px}
+#chapter-list::-webkit-scrollbar-thumb{background:var(--border2)}
+.ch-item{
+  padding:9px 20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;
+  letter-spacing:0.18em;text-transform:uppercase;color:var(--text2);
+  border-left:2px solid transparent;transition:all 0.15s;-webkit-tap-highlight-color:transparent;
+  min-height:36px;display:flex;align-items:center
+}
+.ch-item:hover,.ch-item:active{background:var(--active);color:var(--gold)}
+.ch-item.active{color:var(--gold);border-left-color:var(--gold)}
+.ch-toggle{
+  width:100%;padding:9px 20px;background:none;border:none;border-bottom:1px solid var(--border);
+  cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:0.2em;
+  text-transform:uppercase;color:var(--text3);text-align:left;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:color 0.2s;-webkit-tap-highlight-color:transparent;min-height:36px
+}
+.ch-toggle:hover{color:var(--gold2)}
+.ch-toggle-arrow{transition:transform 0.3s}
+.ch-toggle.open .ch-toggle-arrow{transform:rotate(180deg)}
+
+#stories-list{flex:1;overflow-y:auto;padding:12px 0}
+#stories-list::-webkit-scrollbar{width:3px}
+#stories-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.story-item{
+  padding:12px 20px;cursor:pointer;border-left:2px solid transparent;
+  transition:all 0.2s;position:relative;-webkit-tap-highlight-color:transparent;
+  min-height:48px
+}
+.story-item:hover,.story-item:active{background:var(--active)}
+.story-item.active{background:var(--gold-dim);border-left-color:var(--gold)}
+.story-item .s-title{font-family:var(--font-body);font-size:15px;color:var(--text);line-height:1.3;padding-right:28px;font-weight:400}
+.story-item.active .s-title{color:var(--gold2)}
+.story-item .s-meta{font-family:var(--font-ui);font-size:9px;letter-spacing:0.2em;color:var(--text3);text-transform:uppercase;margin-top:3px}
+.story-item .s-progress{height:2px;background:var(--border);margin-top:6px;border-radius:1px;overflow:hidden}
+.story-item .s-prog-fill{height:100%;background:var(--gold);border-radius:1px;transition:width 0.3s}
+.story-item .s-del{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--text3);
+  font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;transition:color 0.2s,background 0.2s;-webkit-tap-highlight-color:transparent
+}
+.story-item .s-del:hover,.story-item .s-del:active{color:#c05555;background:rgba(192,85,85,0.1)}
+
+.add-btn{
+  margin:12px 16px calc(12px + var(--safe-bot));padding:12px 0;
+  background:none;border:1px solid var(--border2);color:var(--gold);
+  font-family:var(--font-ui);font-size:10px;letter-spacing:0.25em;
+  text-transform:uppercase;cursor:pointer;border-radius:4px;
+  transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;
+  flex-shrink:0;-webkit-tap-highlight-color:transparent;min-height:44px
+}
+.add-btn:hover,.add-btn:active{background:var(--gold-dim);border-color:var(--gold)}
+
+/* ── Main Layout ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;transition:padding 0.3s}
+
+/* ── Top Bar ── */
+#topbar{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 16px;padding-top:calc(10px + var(--safe-top));
+  border-bottom:1px solid var(--border);background:var(--bg);z-index:5;flex-shrink:0;
+  transition:opacity 0.3s,transform 0.3s
+}
+.zen-mode-active #topbar{opacity:0;transform:translateY(-100%);pointer-events:none}
+
+#toggle-sidebar{
+  background:none;border:none;cursor:pointer;color:var(--text2);
+  padding:6px;display:flex;border-radius:4px;min-width:36px;min-height:36px;align-items:center;justify-content:center;
+  transition:color 0.2s,background 0.2s;flex-shrink:0;-webkit-tap-highlight-color:transparent
+}
+#toggle-sidebar:hover,#toggle-sidebar:active{color:var(--gold);background:var(--active)}
+#toggle-sidebar svg{width:18px;height:18px}
+
+#book-title{font-family:var(--font-title);font-size:12px;letter-spacing:0.12em;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+#wpm-display{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0}
+#wpm-val{font-family:var(--font-ui);font-size:11px;letter-spacing:0.1em;color:var(--gold);line-height:1}
+#time-remaining{font-family:var(--font-ui);font-size:8px;letter-spacing:0.15em;color:var(--text3);text-transform:uppercase;margin-top:2px;white-space:nowrap}
+
+.top-action-btn{
+  background:none;border:1px solid var(--border);color:var(--text2);
+  font-family:var(--font-ui);font-size:9px;letter-spacing:0.12em;
+  text-transform:uppercase;cursor:pointer;padding:6px 9px;
+  border-radius:2px;transition:all 0.2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+  min-height:32px;white-space:nowrap
+}
+.top-action-btn:hover{border-color:var(--gold);color:var(--gold)}
+.top-action-btn.active{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+
+.pace-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.pace-label{font-family:var(--font-ui);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text3);white-space:nowrap}
+.pace-val{font-family:var(--font-ui);font-size:9px;letter-spacing:0.15em;color:var(--gold);min-width:44px;text-align:right}
+
+#speed-range{
+  -webkit-appearance:none;appearance:none;width:80px;height:3px;
+  background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--pct,40%),var(--border2) var(--pct,40%),var(--border2) 100%);
+  border-radius:2px;outline:none;cursor:pointer;flex-shrink:0
+}
+#speed-range::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--gold);box-shadow:0 0 6px rgba(201,168,76,0.5);
+  cursor:pointer;transition:transform 0.15s,box-shadow 0.15s
+}
+#speed-range::-webkit-slider-thumb:hover,#speed-range:active::-webkit-slider-thumb{transform:scale(1.35);box-shadow:0 0 14px rgba(201,168,76,0.8)}
+
+.ctrl-group{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.ctrl-btn{
+  background:none;border:1px solid var(--border);color:var(--text2);cursor:pointer;
+  padding:6px 10px;font-family:var(--font-ui);font-size:9px;letter-spacing:0.15em;
+  text-transform:uppercase;border-radius:2px;transition:all 0.2s;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;min-height:32px
+}
+.ctrl-btn:hover,.ctrl-btn:active{border-color:var(--gold);color:var(--gold)}
+.ctrl-btn.active-btn{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+
+@media(max-width:768px){
+  .top-action-btn{display:none!important}
+  #mobile-settings-btn{display:flex!important}
+}
+@media(min-width:769px){
+  #mobile-settings-btn{display:none!important}
+}
+@media(max-width:768px){
+  #topbar{flex-wrap:wrap;padding:8px 12px;padding-top:calc(8px + var(--safe-top));gap:6px}
+  #book-title{font-size:10px;width:calc(100% - 46px);flex-basis:calc(100% - 46px);order:1}
+  #toggle-sidebar{order:0}
+  .pace-wrap{order:3;flex:1}
+  #speed-range{width:100%;flex:1}
+  .ctrl-group{order:2;margin-left:auto}
+  #wpm-display{order:4}
+}
+
+#mobile-settings-btn{
+  display:none;background:none;border:1px solid var(--border);color:var(--text2);
+  padding:6px 10px;border-radius:2px;cursor:pointer;font-size:14px;
+  transition:all 0.2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;align-items:center;
+  min-width:44px;min-height:44px;justify-content:center
+}
+#mobile-settings-btn:active{border-color:var(--gold);color:var(--gold)}
+
+/* ── Quick Settings Panel (Desktop) ── */
+#quick-panel{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:none;flex-wrap:wrap;gap:12px;
+  align-items:center;justify-content:space-between;
+  transition:opacity 0.3s,transform 0.3s
+}
+#quick-panel.open{display:flex}
+.zen-mode-active #quick-panel{opacity:0;pointer-events:none;display:none!important}
+.panel-section{display:flex;align-items:center;gap:8px}
+.panel-label{font-family:var(--font-ui);font-size:9px;letter-spacing:0.15em;color:var(--text3);text-transform:uppercase;white-space:nowrap}
+.panel-select{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  font-family:var(--font-ui);font-size:9px;padding:5px 8px;border-radius:2px;outline:none;
+  text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;-webkit-appearance:none;
+  transition:border-color 0.2s
+}
+.panel-select:focus,.panel-select:hover{border-color:var(--gold)}
+
+/* ── Mobile Settings Drawer ── */
+#settings-drawer{
+  background:var(--bg2);border-bottom:1px solid var(--border);overflow:hidden;
+  max-height:0;transition:max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+  flex-shrink:0
+}
+#settings-drawer.open{max-height:260px}
+.zen-mode-active #settings-drawer{display:none!important}
+.drawer-row{display:flex;gap:8px;padding:8px 12px 0}
+.drawer-row:last-child{padding-bottom:10px}
+.drawer-action-btn{
+  flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  font-family:var(--font-ui);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;
+  cursor:pointer;padding:10px 6px;border-radius:3px;transition:all 0.2s;
+  -webkit-tap-highlight-color:transparent;min-height:44px;display:flex;
+  align-items:center;justify-content:center;gap:4px
+}
+.drawer-action-btn:active,.drawer-action-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ── Stage ── */
+#stage{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--bg);overflow:hidden;position:relative;transition:background 0.4s
+}
+#stage::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 50% 50%,rgba(201,168,76,0.03) 0%,transparent 70%);
+  pointer-events:none;z-index:2
+}
+/* E-Ink: static border frame instead of blobs */
+.theme-eink #stage::after{
+  content:'';position:absolute;inset:24px;
+  border:1px solid rgba(0,0,0,0.08);pointer-events:none;z-index:2
+}
+
+/* ── Ambient Glow Blobs ── */
+.ambient-glow-layer{
+  position:absolute;inset:-20%;pointer-events:none;z-index:1;opacity:0;
+  transition:opacity 0.6s ease-in-out;overflow:hidden;
+  filter:blur(140px);animation:spinGlowContainer 60s linear infinite;transform-origin:center center
+}
+@keyframes spinGlowContainer{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+/* Disable spin on e-ink */
+.theme-eink .ambient-glow-layer{animation:none!important;filter:none!important;display:none!important}
+
+.glow-blob{position:absolute;border-radius:50%;mix-blend-mode:screen;transition:background 0.4s cubic-bezier(0.25,0.8,0.25,1),scale 0.4s cubic-bezier(0.25,0.8,0.25,1.2)}
+.blob-1{width:60%;height:60%;left:-5%;top:-5%;background:var(--blob-c1,rgba(201,168,76,0.12));scale:var(--blob-s1,1);animation:driftBlob1 22s ease-in-out infinite alternate}
+.blob-2{width:55%;height:55%;right:-5%;bottom:-5%;background:var(--blob-c2,rgba(180,100,200,0.1));scale:var(--blob-s2,1);animation:driftBlob2 26s ease-in-out infinite alternate}
+.blob-3{width:50%;height:50%;left:20%;top:20%;background:var(--blob-c3,rgba(100,200,180,0.1));scale:var(--blob-s3,1);animation:driftBlob3 30s ease-in-out infinite alternate}
+.blob-4{width:45%;height:45%;right:20%;top:-10%;background:var(--blob-c4,rgba(232,100,150,0.1));scale:var(--blob-s4,1);animation:driftBlob4 24s ease-in-out infinite alternate}
+@keyframes driftBlob1{0%{transform:translate(0,0) scale(1) rotate(0deg)}50%{transform:translate(12%,18%) scale(1.15) rotate(45deg)}100%{transform:translate(-8%,8%) scale(0.9) rotate(-45deg)}}
+@keyframes driftBlob2{0%{transform:translate(0,0) scale(1.05) rotate(0deg)}50%{transform:translate(-18%,-12%) scale(0.85) rotate(-60deg)}100%{transform:translate(10%,-6%) scale(1.1) rotate(60deg)}}
+@keyframes driftBlob3{0%{transform:translate(0,0) scale(0.9)}50%{transform:translate(15%,-10%) scale(1.15)}100%{transform:translate(-10%,12%) scale(0.95)}}
+@keyframes driftBlob4{0%{transform:translate(0,0) scale(1) rotate(0deg)}50%{transform:translate(-12%,15%) scale(1.1) rotate(30deg)}100%{transform:translate(8%,-8%) scale(0.9) rotate(-30deg)}}
+.playing-active .ambient-glow-layer{animation:spinGlowContainer 25s linear infinite}
+.playing-active .blob-1{animation:driftBlob1 11s ease-in-out infinite alternate,pulseActive 6s ease-in-out infinite alternate}
+.playing-active .blob-2{animation:driftBlob2 13s ease-in-out infinite alternate,pulseActive 7s ease-in-out infinite alternate}
+.playing-active .blob-3{animation:driftBlob3 15s ease-in-out infinite alternate,pulseActive 8s ease-in-out infinite alternate}
+.playing-active .blob-4{animation:driftBlob4 12s ease-in-out infinite alternate,pulseActive 6.5s ease-in-out infinite alternate}
+@keyframes pulseActive{0%{opacity:0.85;filter:brightness(1)}50%{opacity:1;filter:brightness(1.3)}100%{opacity:0.85;filter:brightness(1)}}
+
+/* ── Zen Exit ── */
+#zen-exit-btn{
+  position:absolute;top:calc(20px + var(--safe-top));right:calc(20px + var(--safe-right));
+  display:none;z-index:15;background:rgba(0,0,0,0.45);border:1px solid var(--border);color:var(--text2);
+  font-family:var(--font-ui);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+  padding:10px 14px;border-radius:4px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(6px);
+  min-height:44px;min-width:44px
+}
+#zen-exit-btn:hover{border-color:var(--gold);color:var(--gold)}
+.zen-mode-active #zen-exit-btn{display:flex;align-items:center;justify-content:center}
+.zen-mode-active #topbar{opacity:0;transform:translateY(-100%);pointer-events:none}
+.zen-mode-active #quick-panel{display:none!important}
+.zen-mode-active #settings-drawer{display:none!important}
+
+/* ── AI Summary / Quiz Drawer ── */
+#summary-drawer{
+  position:fixed;right:0;top:0;bottom:0;width:400px;max-width:100vw;
+  background:var(--bg2);border-left:1px solid var(--border);z-index:30;
+  transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  display:flex;flex-direction:column;padding-top:var(--safe-top);
+  box-shadow:-4px 0 40px rgba(0,0,0,0.55)
+}
+#summary-drawer.open{transform:translateX(0)}
+.drawer-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.drawer-title{font-family:var(--font-title);font-size:13px;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase}
+.drawer-close{
+  background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;
+  min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;transition:color 0.2s,background 0.2s
+}
+.drawer-close:hover,.drawer-close:active{color:var(--text);background:var(--active)}
+.drawer-content{flex:1;overflow-y:auto;padding:20px;font-family:var(--font-body);font-size:15px;line-height:1.65;color:var(--text)}
+.drawer-content::-webkit-scrollbar{width:3px}
+.drawer-content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.drawer-content p{margin-bottom:14px}
+.drawer-content h4{font-family:var(--font-title);color:var(--gold2);font-size:13px;margin:22px 0 10px;letter-spacing:0.1em;border-bottom:1px solid var(--border);padding-bottom:6px}
+.drawer-content li{margin-left:16px;margin-bottom:6px;color:var(--text2)}
+.ai-badge{display:inline-block;background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold);font-family:var(--font-ui);font-size:7px;letter-spacing:0.1em;padding:2px 6px;border-radius:3px;text-transform:uppercase;vertical-align:middle;margin-left:8px}
+
+/* ── Caption Wrap ── */
+#caption-wrap{
+  width:100%;max-width:820px;padding:0 32px;
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;z-index:3
+}
+@media(max-width:480px){#caption-wrap{padding:0 20px}}
+
+/* ── Progress Bar ── */
+#progress-bar{
+  width:100%;height:3px;background:var(--border);margin-bottom:28px;
+  position:relative;border-radius:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:height 0.15s,margin-bottom 0.15s
+}
+#progress-bar:hover{height:5px;margin-bottom:26px}
+#progress-fill{position:absolute;left:0;top:0;height:100%;background:var(--gold);border-radius:2px;transition:width 0.35s ease;box-shadow:0 0 8px rgba(201,168,76,0.4)}
+#progress-scrub-handle{
+  position:absolute;top:50%;width:12px;height:12px;background:var(--gold);border-radius:50%;
+  transform:translate(-50%,-50%) scale(0);transition:transform 0.15s;pointer-events:none;
+  box-shadow:0 0 12px rgba(201,168,76,0.6)
+}
+#progress-bar:hover #progress-scrub-handle,#progress-bar:active #progress-scrub-handle{transform:translate(-50%,-50%) scale(1)}
+
+#chapter-label{font-family:var(--font-ui);font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:var(--text3);margin-bottom:24px}
+
+/* ── ORP RSVP ── */
+#orp-wrap{
+  display:none;align-items:center;justify-content:center;
+  min-height:100px;position:relative;width:100%;max-width:640px
+}
+#orp-before{font-family:var(--font-body);font-size:clamp(22px,4.5vw,32px);color:var(--text);opacity:0.9;font-weight:300;text-align:right;flex:1;padding-right:1px;line-height:1.4}
+#orp-letter{font-family:var(--font-body);font-size:clamp(22px,4.5vw,32px);color:var(--gold2);font-weight:400;text-shadow:0 0 20px rgba(232,201,122,0.4);text-align:center;min-width:24px;line-height:1.4}
+#orp-after{font-family:var(--font-body);font-size:clamp(22px,4.5vw,32px);color:var(--text);opacity:0.9;font-weight:300;text-align:left;flex:1;padding-left:1px;line-height:1.4}
+#orp-guide{position:absolute;bottom:-12px;width:1px;height:6px;background:var(--gold);opacity:0.5;left:50%}
+#orp-wrap.neutral-rsvp #orp-letter{color:var(--text);text-shadow:none;font-weight:300}
+
+/* ── Caption Box ── */
+#caption-box{text-align:center;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
+.caption-line{font-family:var(--font-body);line-height:1.55;font-weight:300;letter-spacing:0.01em;max-width:680px;transition:opacity 0.25s,transform 0.3s}
+.caption-line.prev{opacity:0.14;font-size:17px;margin-bottom:10px;transform:translateY(-4px);font-style:italic;color:var(--text2)}
+.caption-line.current{opacity:1;font-size:clamp(22px,4.5vw,32px);line-height:1.4}
+.caption-line.next{opacity:0.16;font-size:17px;margin-top:10px;transform:translateY(4px);font-style:italic;color:var(--text2)}
+
+@media(max-width:480px){
+  .caption-line.prev,.caption-line.next{font-size:14px}
+  #caption-box{min-height:120px}
+}
+
+/* Font overrides */
+body.font-sans .caption-line,body.font-sans #orp-before,body.font-sans #orp-letter,body.font-sans #orp-after,body.font-sans .drawer-content{font-family:'DM Sans',sans-serif}
+body.font-dyslexic .caption-line,body.font-dyslexic #orp-before,body.font-dyslexic #orp-letter,body.font-dyslexic #orp-after,body.font-dyslexic .drawer-content{font-family:'Arial',sans-serif;letter-spacing:0.05em;word-spacing:0.1em}
+
+#counter{font-family:var(--font-ui);font-size:10px;letter-spacing:0.2em;color:var(--text3);margin-top:24px}
+
+/* ── Nav Controls ── */
+#nav-controls{display:flex;align-items:center;gap:20px;margin-top:32px;padding-bottom:var(--safe-bot)}
+.nav-btn{
+  background:none;border:1px solid var(--border);color:var(--text2);cursor:pointer;
+  width:48px;height:48px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;transition:all 0.2s;-webkit-tap-highlight-color:transparent
+}
+.nav-btn:hover,.nav-btn:active{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.nav-btn svg{width:16px;height:16px}
+#play-btn{
+  width:64px;height:64px;border-radius:50%;border:1px solid var(--gold);background:var(--gold-dim);
+  color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;-webkit-tap-highlight-color:transparent
+}
+#play-btn:hover,#play-btn:active{background:rgba(201,168,76,0.25);box-shadow:0 0 20px rgba(201,168,76,0.25)}
+#play-btn svg{width:22px;height:22px}
+
+/* ── Empty State ── */
+#empty-state{text-align:center;padding:20px;position:relative;z-index:2}
+#empty-state .e-icon{font-size:40px;margin-bottom:20px;opacity:0.2}
+#empty-state .e-title{font-family:var(--font-title);font-size:20px;color:var(--text2);letter-spacing:0.12em;margin-bottom:10px}
+#empty-state .e-sub{font-family:var(--font-body);font-style:italic;font-size:15px;color:var(--text3)}
+
+/* ── Modal ── */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.82);
+  display:flex;align-items:flex-end;justify-content:center;
+  z-index:100;opacity:0;pointer-events:none;
+  transition:opacity 0.25s;backdrop-filter:blur(6px)
+}
+#modal-overlay.open{opacity:1;pointer-events:all}
+@media(min-width:600px){#modal-overlay{align-items:center}#modal{border-radius:4px;max-height:90vh}}
+#modal{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:12px 12px 0 0;
+  width:100%;max-width:580px;max-height:92dvh;overflow-y:auto;padding:28px 24px;
+  padding-bottom:calc(28px + var(--safe-bot));transform:translateY(24px);
+  transition:transform 0.3s cubic-bezier(.4,0,.2,1)
+}
+#modal::-webkit-scrollbar{width:3px}
+#modal::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+#modal-overlay.open #modal{transform:translateY(0)}
+.modal-title{font-family:var(--font-title);font-size:15px;letter-spacing:0.15em;color:var(--gold);margin-bottom:24px;text-transform:uppercase}
+.field{margin-bottom:18px}
+.field label{display:block;font-family:var(--font-ui);font-size:9px;letter-spacing:0.25em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.field input,.field textarea,.field select{
+  width:100%;background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);font-family:var(--font-body);font-size:15px;
+  padding:10px 14px;border-radius:2px;outline:none;resize:vertical;
+  transition:border-color 0.2s;-webkit-appearance:none
+}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold)}
+.field textarea{min-height:140px;line-height:1.6}
+#drop-zone{
+  border:1px dashed var(--border2);border-radius:2px;padding:16px;text-align:center;cursor:pointer;
+  transition:border-color 0.2s,background 0.2s;margin-bottom:18px;-webkit-tap-highlight-color:transparent;min-height:60px;display:flex;align-items:center;justify-content:center
+}
+#drop-zone:hover,#drop-zone.drag-over{border-color:var(--gold);background:var(--gold-dim)}
+#drop-zone p{font-family:var(--font-ui);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text3)}
+#drop-zone p span{color:var(--gold)}
+#file-input{display:none}
+.modal-row{display:flex;gap:10px}
+.modal-row .field{flex:1}
+.modal-actions{display:flex;gap:10px;justify-content:space-between;margin-top:24px;align-items:center}
+.btn-paste{background:none;border:1px solid var(--border2);color:var(--text3);cursor:pointer;padding:10px 14px;font-family:var(--font-ui);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;border-radius:2px;transition:all 0.2s;-webkit-tap-highlight-color:transparent;min-height:40px}
+.btn-paste:hover{border-color:var(--text2);color:var(--text2)}
+.modal-btns{display:flex;gap:10px}
+.btn-cancel{background:none;border:1px solid var(--border2);color:var(--text2);cursor:pointer;padding:10px 18px;font-family:var(--font-ui);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;border-radius:2px;transition:all 0.2s;-webkit-tap-highlight-color:transparent;min-height:40px}
+.btn-cancel:hover{border-color:var(--text2)}
+.btn-save{background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold);cursor:pointer;padding:10px 22px;font-family:var(--font-ui);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;border-radius:2px;transition:all 0.2s;-webkit-tap-highlight-color:transparent;min-height:40px}
+.btn-save:hover,.btn-save:active{background:rgba(201,168,76,0.28)}
+
+/* ── Loader ── */
+.loading-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;margin:28px 0}
+.spinner{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Quiz ── */
+.quiz-card{margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:22px}
+.quiz-q-num{font-family:var(--font-ui);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px}
+.quiz-q-text{font-family:var(--font-body);font-size:16px;color:var(--text);margin-bottom:14px;line-height:1.5}
+.quiz-option{
+  display:block;width:100%;text-align:left;background:var(--bg3);
+  border:1px solid var(--border);padding:12px 16px;border-radius:4px;
+  color:var(--text);font-family:var(--font-body);font-size:15px;margin-bottom:8px;
+  cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;min-height:44px
+}
+.quiz-option:not(:disabled):hover{border-color:var(--gold2);background:var(--active)}
+.quiz-option.correct{border-color:#4cd964!important;background:rgba(76,217,100,0.15)!important;color:#4cd964}
+.quiz-option.wrong{border-color:#ff3b30!important;background:rgba(255,59,48,0.15)!important;color:#ff3b30}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;bottom:calc(24px + var(--safe-bot));left:50%;
+  transform:translateX(-50%) translateY(60px);
+  background:var(--surface);border:1px solid var(--border2);
+  color:var(--text);font-family:var(--font-ui);font-size:10px;letter-spacing:0.15em;
+  padding:11px 22px;border-radius:3px;z-index:200;white-space:nowrap;
+  transition:transform 0.3s,opacity 0.3s;opacity:0;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4)
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ── Animations ── */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.caption-fresh{animation:fadeInUp 0.28s ease forwards}
+
+/* ── EPUB Preview ── */
+.parsed-epub-preview{font-size:11px;opacity:0.6;line-height:1.4;max-height:100px;overflow-y:auto;border:1px solid var(--border);padding:8px;border-radius:2px;background:var(--bg3)}
+
+/* ── Delete confirm dialog ── */
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:110;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;backdrop-filter:blur(4px)}
+#confirm-overlay.open{opacity:1;pointer-events:all}
+#confirm-box{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:28px;max-width:320px;width:90%;text-align:center}
+.confirm-msg{font-family:var(--font-body);font-size:16px;color:var(--text);margin-bottom:20px;line-height:1.5}
+.confirm-btns{display:flex;gap:10px;justify-content:center}
+.confirm-del{background:rgba(192,85,85,0.2);border:1px solid #c05555;color:#c05555;cursor:pointer;padding:9px 20px;font-family:var(--font-ui);font-size:10px;letter-spacing:0.15em;text-transform:uppercase;border-radius:2px;transition:all 0.2s;min-height:40px}
+.confirm-del:hover{background:rgba(192,85,85,0.35)}
+.confirm-cancel-btn{background:none;border:1px solid var(--border2);color:var(--text2);cursor:pointer;padding:9px 20px;font-family:var(--font-ui);font-size:10px;letter-spacing:0.15em;text-transform:uppercase;border-radius:2px;transition:all 0.2s;min-height:40px}
+.confirm-cancel-btn:hover{border-color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-row">
+        <div class="logo">Luminary</div>
+        <div class="pro-badge">PRO</div>
+      </div>
+      <div class="logo-sub">Story Reader &amp; AI Trainer</div>
+    </div>
+
+    <div class="lib-controls">
+      <button class="lib-btn" onclick="exportLibrary()" title="Backup stories">📥 Backup</button>
+      <button class="lib-btn" onclick="document.getElementById('import-file-inp').click()" title="Restore library">📤 Restore</button>
+      <input type="file" id="import-file-inp" accept=".json" style="display:none" onchange="importLibrary(event)">
+    </div>
+
+    <div id="chapter-drawer">
+      <div id="chapter-list"></div>
+    </div>
+
+    <div id="stories-list"></div>
+    <button class="add-btn" onclick="openModal()">+ Add Story</button>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <button id="toggle-sidebar" onclick="toggleSidebar()" title="Toggle library">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+        </svg>
+      </button>
+      <span id="book-title">—</span>
+
+      <div class="ctrl-group">
+        <button class="ctrl-btn" id="mode-btn" onclick="toggleMode()">Word</button>
+        <button class="ctrl-btn" onclick="restartReader()" title="Reset to start">↺</button>
+      </div>
+
+      <div class="pace-wrap">
+        <span class="pace-label">Pace</span>
+        <input type="range" id="speed-range" min="1" max="100" value="40" title="Reading speed" oninput="onPaceChange(this)">
+        <span class="pace-val" id="pace-val">—</span>
+      </div>
+
+      <div id="wpm-display">
+        <span id="wpm-val">— wpm</span>
+        <span id="time-remaining">—</span>
+      </div>
+
+      <button class="top-action-btn" id="desktop-settings-btn" onclick="toggleQuickPanel()">⚙️ Prefs</button>
+      <button class="top-action-btn" id="summary-btn" onclick="triggerAISummary()">✨ Summary</button>
+      <button class="top-action-btn" id="quiz-btn" onclick="triggerAIQuiz()">📝 Quiz</button>
+      <button class="top-action-btn" id="zen-btn" onclick="toggleZenMode()">📴 Zen</button>
+
+      <button id="mobile-settings-btn" onclick="toggleSettingsDrawer()" aria-label="Settings">⚙</button>
+    </div>
+
+    <!-- Desktop Quick Settings Panel -->
+    <div id="quick-panel">
+      <div class="panel-section">
+        <span class="panel-label">Theme:</span>
+        <select class="panel-select" id="theme-select" onchange="setThemeIndex(this.value)">
+          <option value="0">Midnight</option>
+          <option value="1">Sepia</option>
+          <option value="2">E-Ink</option>
+        </select>
+      </div>
+      <div class="panel-section">
+        <span class="panel-label">Font:</span>
+        <select class="panel-select" id="font-select" onchange="setFontIndex(this.value)">
+          <option value="0">Cormorant (Serif)</option>
+          <option value="1">DM Sans (Sans)</option>
+          <option value="2">Arial (Dyslexic)</option>
+        </select>
+      </div>
+      <div class="panel-section">
+        <span class="panel-label">Chunk:</span>
+        <select class="panel-select" id="chunk-select" onchange="setChunkSize(this.value)">
+          <option value="1">1 Word</option>
+          <option value="2">2 Words</option>
+          <option value="3">3 Words</option>
+        </select>
+      </div>
+      <div class="panel-section">
+        <span class="panel-label">RSVP Marker:</span>
+        <select class="panel-select" id="orp-style-select" onchange="setOrpStyle(this.value)">
+          <option value="classic">Optimal (ORP)</option>
+          <option value="neutral">Neutral Center</option>
+        </select>
+      </div>
+      <div class="panel-section">
+        <span class="panel-label">Pacing:</span>
+        <select class="panel-select" id="delay-intensity" onchange="setDelayIntensity(this.value)">
+          <option value="standard">Standard Pauses</option>
+          <option value="long">Extended Pauses</option>
+          <option value="off">No Extra Pauses</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Mobile Settings Drawer -->
+    <div id="settings-drawer">
+      <div class="drawer-row">
+        <button class="drawer-action-btn" onclick="triggerAISummary()">✨ Summary</button>
+        <button class="drawer-action-btn" onclick="triggerAIQuiz()">📝 Quiz</button>
+        <button class="drawer-action-btn" onclick="toggleZenMode()">📴 Zen</button>
+      </div>
+      <div class="drawer-row">
+        <button class="drawer-action-btn" onclick="cycleTheme()">🎨 <span id="theme-label-m">Midnight</span></button>
+        <button class="drawer-action-btn" onclick="cycleFont()">✏️ <span id="font-label-m">Serif</span></button>
+        <button class="drawer-action-btn" onclick="toggleQuickPanel(); toggleSettingsDrawer()">⚙️ More</button>
+      </div>
+    </div>
+
+    <div id="stage">
+      <div id="ambient-glow-a" class="ambient-glow-layer">
+        <div class="glow-blob blob-1"></div>
+        <div class="glow-blob blob-2"></div>
+        <div class="glow-blob blob-3"></div>
+        <div class="glow-blob blob-4"></div>
+      </div>
+      <div id="ambient-glow-b" class="ambient-glow-layer">
+        <div class="glow-blob blob-1"></div>
+        <div class="glow-blob blob-2"></div>
+        <div class="glow-blob blob-3"></div>
+        <div class="glow-blob blob-4"></div>
+      </div>
+
+      <button id="zen-exit-btn" onclick="toggleZenMode()">Exit Zen ✕</button>
+
+      <div id="empty-state">
+        <div class="e-icon">✦</div>
+        <div class="e-title">No Story Selected</div>
+        <div class="e-sub">Choose a story from the library, or add your own to begin training.</div>
+      </div>
+
+      <div id="caption-wrap" style="display:none">
+        <div id="chapter-label"></div>
+        <div id="progress-bar">
+          <div id="progress-fill" style="width:0%"></div>
+          <div id="progress-scrub-handle"></div>
+        </div>
+
+        <div id="orp-wrap">
+          <span id="orp-before"></span><span id="orp-letter"></span><span id="orp-after"></span>
+          <div id="orp-guide"></div>
+        </div>
+
+        <div id="caption-box">
+          <div class="caption-line prev" id="line-prev"></div>
+          <div class="caption-line current" id="line-current"></div>
+          <div class="caption-line next" id="line-next"></div>
+        </div>
+
+        <div id="counter"></div>
+        <div id="nav-controls">
+          <button class="nav-btn" onclick="stepBack()" title="Previous (←)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button id="play-btn" onclick="togglePlay()">
+            <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+          </button>
+          <button class="nav-btn" onclick="stepForward()" title="Next (→)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Summary/Quiz Drawer -->
+<div id="summary-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawer-title-label">AI Panel</div>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Close">×</button>
+  </div>
+  <div class="drawer-content" id="drawer-body"></div>
+</div>
+
+<!-- Add Story Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-title">Add New Story</div>
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <p>Drop a <span>.txt</span>, <span>.html</span> or raw <span>.epub</span> file here, or <span>tap to browse</span></p>
+      <input type="file" id="file-input" accept=".txt,.html,.htm,.epub" onchange="onFileSelect(event)">
+    </div>
+    <div id="file-parsed-preview" style="display:none;margin-bottom:15px">
+      <label style="font-family:var(--font-ui);font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)">Loaded Text Snippet</label>
+      <div class="parsed-epub-preview" id="epub-snippet"></div>
+    </div>
+    <div class="modal-row">
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="inp-title" placeholder="The Midnight Garden…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Author (optional)</label>
+        <input type="text" id="inp-author" placeholder="Anonymous" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label>Story Text</label>
+      <textarea id="inp-text" placeholder="Paste or write your story here…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-paste" onclick="pasteFromClipboard()">⌘ Paste</button>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveStory()">Save Story</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Dialog -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <div class="confirm-msg">Permanently remove this story?</div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel-btn" onclick="closeConfirm()">Keep It</button>
+      <button class="confirm-del" id="confirm-del-btn">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  GEMINI API CLIENT
+// ══════════════════════════════════════════════════════════════════
+const apiKey = "";
+
+async function callGemini(promptText, isJson = false) {
+  let retries = 5, delay = 1000;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const payload = {
+    contents: [{ parts: [{ text: promptText }] }],
+    systemInstruction: { parts: [{ text: "You are Luminary Pro, an integrated AI reading helper. Your output should be engaging, concise, and focused on helping a speed-reader retain and test content." }] }
+  };
+  if (isJson) {
+    payload.generationConfig = {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          questions: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                question: { type: "STRING" },
+                options: { type: "ARRAY", items: { type: "STRING" } },
+                correctIndex: { type: "INTEGER" }
+              },
+              required: ["question", "options", "correctIndex"]
+            }
+          }
+        },
+        required: ["questions"]
+      }
+    };
+  }
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) { const e = await res.text(); throw new Error(`HTTP ${res.status}: ${e}`); }
+      return await res.json();
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MOOD LEXICON & AMBIENT GLOW
+// ══════════════════════════════════════════════════════════════════
+const MOOD_LEXICON = {
+  serene: {
+    words: ['peace','calm','serene','quiet','silent','soft','sky','dream','river','lake','wood','forest','green','blue','star','stars','moon','gentle','breeze','wind','rest','sleep','grass','nature','dusk','dawn','morning','fresh','breath','slow','drift','still'],
+    colors: {
+      midnight: ['rgba(0,242,254,0.35)','rgba(66,133,244,0.35)','rgba(52,168,83,0.25)','rgba(161,66,244,0.2)'],
+      sepia: ['rgba(46,204,113,0.25)','rgba(26,188,156,0.22)','rgba(52,152,219,0.18)','rgba(160,180,100,0.15)'],
+      eink: ['rgba(46,204,113,0.12)','rgba(52,152,219,0.1)','rgba(26,188,156,0.08)','rgba(120,130,140,0.08)']
+    }
+  },
+  somber: {
+    words: ['sad','somber','melancholy','grey','gray','cold','stone','shadow','shadows','tear','tears','weep','cry','dead','death','lost','alone','lonely','rain','autumn','winter','snow','fade','dark','darkness','hollow','dust','dusty','empty','heavy','ache','pain','grave','grief','mourn','dormant'],
+    colors: {
+      midnight: ['rgba(66,133,244,0.35)','rgba(103,58,183,0.35)','rgba(233,30,99,0.25)','rgba(40,10,80,0.4)'],
+      sepia: ['rgba(112,111,211,0.22)','rgba(109,33,79,0.22)','rgba(87,95,207,0.18)','rgba(30,50,40,0.2)'],
+      eink: ['rgba(149,165,166,0.15)','rgba(127,140,141,0.12)','rgba(189,195,199,0.1)','rgba(130,120,140,0.08)']
+    }
+  },
+  mystery: {
+    words: ['sudden','secret','key','lock','fear','ghost','whisper','whispers','strange','stranger','blood','danger','clock','ticks','hide','hidden','run','escape','shadow','deep','night','midnight','mask','masked','silence','door','locked','curious','odd','weird','unseen','unknown','mist','fog','creak','ancient'],
+    colors: {
+      midnight: ['rgba(255,110,106,0.35)','rgba(245,115,236,0.35)','rgba(123,31,162,0.3)','rgba(255,186,0,0.25)'],
+      sepia: ['rgba(155,89,182,0.25)','rgba(192,57,43,0.22)','rgba(241,196,15,0.18)','rgba(120,60,40,0.15)'],
+      eink: ['rgba(155,89,182,0.12)','rgba(192,57,43,0.1)','rgba(241,196,15,0.08)','rgba(150,150,200,0.08)']
+    }
+  },
+  warm: {
+    words: ['dance','laugh','bright','love','beautiful','joy','magic','magical','fly','fire','light','gold','golden','warm','warmth','sun','sunny','shine','glow','glowing','laughter','happy','happily','smile','smiling','heart','kind','friend','friends','flame','summer','spring','bloom','rose','sweet'],
+    colors: {
+      midnight: ['rgba(255,217,61,0.35)','rgba(255,138,0,0.3)','rgba(255,107,107,0.35)','rgba(103,58,183,0.2)'],
+      sepia: ['rgba(230,126,34,0.25)','rgba(241,196,15,0.2)','rgba(211,84,0,0.18)','rgba(180,80,50,0.15)'],
+      eink: ['rgba(230,126,34,0.12)','rgba(241,196,15,0.1)','rgba(230,90,90,0.08)','rgba(210,180,140,0.08)']
+    }
+  },
+  neutral: {
+    colors: {
+      midnight: ['rgba(66,133,244,0.35)','rgba(161,66,244,0.35)','rgba(255,133,174,0.3)','rgba(249,171,0,0.25)'],
+      sepia: ['rgba(212,168,76,0.22)','rgba(180,100,120,0.18)','rgba(160,120,80,0.15)','rgba(130,150,120,0.15)'],
+      eink: ['rgba(0,0,0,0.03)','rgba(0,0,0,0.02)','rgba(180,170,160,0.02)','rgba(150,160,170,0.02)']
+    }
+  }
+};
+
+function analyzeMood(text) {
+  if (!text) return 'neutral';
+  const tokens = text.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/);
+  const scores = { serene:0, somber:0, mystery:0, warm:0 };
+  tokens.forEach(t => {
+    for (const [m, d] of Object.entries(MOOD_LEXICON)) {
+      if (m !== 'neutral' && d.words && d.words.includes(t)) scores[m]++;
+    }
+  });
+  let maxMood = 'neutral', maxScore = 0;
+  for (const [m, s] of Object.entries(scores)) { if (s > maxScore) { maxScore = s; maxMood = m; } }
+  return maxMood;
+}
+
+let currentAmbientMood = null, currentGlowLayer = 'a', activeGlowTheme = null;
+
+function updateAmbientGlow(text) {
+  if (themeIdx === 2) return; // E-Ink: no glow
+  const contextText = text || '';
+  const mood = analyzeMood(contextText);
+  const theme = getThemeName();
+  const cleanWord = contextText.trim().toLowerCase().replace(/[^a-z]/g,'');
+  let wordMood = 'neutral';
+  for (const [m, d] of Object.entries(MOOD_LEXICON)) {
+    if (m !== 'neutral' && d.words && d.words.includes(cleanWord)) { wordMood = m; break; }
+  }
+  let s1=1,s2=1,s3=1,s4=1, brightness=1.0;
+  if (wordMood !== 'neutral') {
+    brightness = 1.35;
+    if (wordMood==='serene')  { s1=1.35;s3=1.25;s2=0.75;s4=0.9; }
+    else if (wordMood==='somber')  { s2=1.4;s1=0.7;s3=0.9;s4=1.2; }
+    else if (wordMood==='mystery') { s4=1.45;s3=1.3;s1=0.8;s2=0.85; }
+    else if (wordMood==='warm')    { s1=1.3;s2=1.3;s4=1.4;s3=1.0; }
+  }
+  if (/[.!?…]/.test(text||'')) { s1*=1.3;s2*=1.3;s3*=1.3;s4*=1.3; brightness=1.5; }
+  const colors = MOOD_LEXICON[mood].colors[theme];
+  const nextLayer = currentGlowLayer==='a'?'b':'a';
+  const activeEl = document.getElementById('ambient-glow-'+currentGlowLayer);
+  const nextEl   = document.getElementById('ambient-glow-'+nextLayer);
+  [activeEl, nextEl].forEach(el => {
+    if (!el) return;
+    el.style.setProperty('--blob-c1', colors[0]);
+    el.style.setProperty('--blob-c2', colors[1]);
+    el.style.setProperty('--blob-c3', colors[2]);
+    el.style.setProperty('--blob-c4', colors[3]);
+    el.style.setProperty('--blob-s1', s1);
+    el.style.setProperty('--blob-s2', s2);
+    el.style.setProperty('--blob-s3', s3);
+    el.style.setProperty('--blob-s4', s4);
+    el.style.filter = `blur(140px) brightness(${brightness})`;
+  });
+  if (currentAmbientMood !== mood || activeGlowTheme !== theme) {
+    if (nextEl) nextEl.style.opacity='1';
+    if (activeEl) activeEl.style.opacity='0';
+    currentAmbientMood = mood; currentGlowLayer = nextLayer; activeGlowTheme = theme;
+  }
+}
+function getThemeName() { return ['midnight','sepia','eink'][themeIdx]||'midnight'; }
+
+// ══════════════════════════════════════════════════════════════════
+//  DEFAULT LIBRARY
+// ══════════════════════════════════════════════════════════════════
+const DEFAULT_STORIES = [
+  { id:'s1', title:'The Last Light', author:'A. Morrow', text:`She found the lighthouse on the third day of searching. It rose from the cliffs like a pale finger pointing at a sky it no longer believed in. The lantern room was dark, of course — it had been dark for thirty years, ever since the ships stopped coming.
+
+Elena climbed the iron stairs slowly, one hand trailing the curved wall, feeling the cold seep through stone that had swallowed decades of sea wind. She counted the steps without meaning to. Forty-two. The same as always.
+
+At the top, the great lens sat dormant and dusty, its prisms catching the grey afternoon light and breaking it into colors that had no business being this sad. She pressed her palm to the glass. It was warmer than the air outside. Strange.
+
+She had come looking for her grandfather's logbooks. What she found instead was a candle, half-burned, sitting in a brass holder on the keeper's table. It was recent. She could tell by the soft waxy smell, by the way the wick had not yet blackened with age.
+
+Someone still came here. Someone still kept the light — even a small one, even a secret one — burning in the dark.` },
+  { id:'s2', title:'The Letter', author:'P. Vasquez', text:`The letter arrived on a Tuesday, which was unusual. Not because Tuesday was a strange day for letters — but because the address was written in her own handwriting, and she had never sent anything to herself.
+
+She stood at the door in her bathrobe, holding the envelope up to the morning light as if she could see through it. The stamps were unfamiliar. The postmark was smeared beyond reading.
+
+Inside was a single sheet of paper. At the top, the date: September 14th — six years from now.
+
+"Don't take the job in Oslo," it began. "Not because it goes badly. It goes beautifully. But you will fall in love with the city and forget to come home, and there are things here that need you."
+
+She read it three times standing in the doorway, the cold air making her toes ache.
+
+At the bottom, just above the signature, there was a small drawing: a house she did not recognize, surrounded by trees, with a light in every window. She felt certain, with a conviction she could not explain, that she had drawn it herself.` },
+  { id:'s3', title:'The Cartographer', author:'I. Osei', text:`He spent forty years making maps of places he had never been. Not imaginary places — real ones. Countries, coastlines, mountain ranges surveyed by others and handed to him in notes and measurements and rough sketches that he translated into the clean lines of geography.
+
+He knew the shape of every continent by touch, could trace the curve of rivers in the dark. But he had never left the city where he was born.
+
+When he finally retired, his daughter bought him a plane ticket to Iceland — to a fjord he had mapped in 1987 from a colleague's photographs. He stood at the water's edge in the thin arctic light and looked at the mountains he had drawn so carefully, and felt something he could not name.
+
+The proportions were almost right. The feeling was entirely wrong.
+
+No map, he understood, could ever hold the way cold air catches in the lungs like something living. No contour line captures the particular silence of water that has never heard a human voice.
+
+He had spent forty years making accurate documents of other people's astonishment. He had only a few left to gather his own.` }
+];
+
+// ══════════════════════════════════════════════════════════════════
+//  APP STATE
+// ══════════════════════════════════════════════════════════════════
+let stories = JSON.parse(localStorage.getItem('luminary_stories_v2') || 'null') || JSON.parse(JSON.stringify(DEFAULT_STORIES));
+let currentStoryId = null;
+let sentences = [], cursor = 0;
+let playing = false, playTimer = null, wordTimer = null;
+let sidebarOpen = window.innerWidth > 640;
+let wordMode = false, words = [], wordIdx = 0;
+let chapters = [], currentChapterIdx = 0;
+let settingsDrawerOpen = false;
+let chunkSize = parseInt(localStorage.getItem('luminary_chunk_size') || '1');
+let orpStyle = localStorage.getItem('luminary_orp_style') || 'classic';
+let delayIntensity = localStorage.getItem('luminary_delay_intensity') || 'standard';
+let zenMode = false;
+
+const THEMES = ['midnight','sepia','eink'];
+const THEME_LABELS = ['Midnight','Sepia','E-Ink'];
+let themeIdx = parseInt(localStorage.getItem('luminary_theme') || '0');
+const FONTS = ['serif','sans','dyslexic'];
+const FONT_LABELS = ['Serif','Sans','Arial'];
+let fontIdx = parseInt(localStorage.getItem('luminary_font') || '0');
+
+// ══════════════════════════════════════════════════════════════════
+//  PERSISTENCE
+// ══════════════════════════════════════════════════════════════════
+function save() { localStorage.setItem('luminary_stories_v2', JSON.stringify(stories)); }
+function savePos() {
+  if (!currentStoryId) return;
+  const s = stories.find(s => s.id === currentStoryId);
+  if (s) { s.savedCursor = cursor; s.savedWordIdx = wordIdx; save(); renderSidebar(); }
+}
+
+function exportLibrary() {
+  const a = document.createElement('a');
+  a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(stories, null, 2));
+  a.download = `luminary_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Library exported 💾');
+}
+function importLibrary(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (Array.isArray(parsed) && parsed.length && parsed[0].title && parsed[0].text) {
+        stories = parsed; save(); renderSidebar();
+        if (stories.length) loadStory(stories[0].id);
+        showToast('Library restored 📚');
+      } else showToast('Invalid backup file format');
+    } catch { showToast('Could not parse file.'); }
+  };
+  r.readAsText(f);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  THEME & FONT
+// ══════════════════════════════════════════════════════════════════
+function applyTheme() {
+  document.body.classList.remove('theme-sepia','theme-eink');
+  if (themeIdx===1) document.body.classList.add('theme-sepia');
+  if (themeIdx===2) document.body.classList.add('theme-eink');
+  const lbl = document.getElementById('theme-label-m');
+  if (lbl) lbl.textContent = THEME_LABELS[themeIdx];
+  const sel = document.getElementById('theme-select');
+  if (sel) sel.value = themeIdx;
+  localStorage.setItem('luminary_theme', themeIdx);
+  if (currentStoryId) updateAmbientGlow(wordMode ? (words[wordIdx]||'') : (sentences[cursor]||''));
+  else updateAmbientGlow('');
+}
+function setThemeIndex(idx) { themeIdx = parseInt(idx); applyTheme(); }
+function cycleTheme() { themeIdx = (themeIdx+1)%THEMES.length; applyTheme(); }
+
+function applyFont() {
+  document.body.classList.remove('font-sans','font-dyslexic');
+  if (fontIdx===1) document.body.classList.add('font-sans');
+  if (fontIdx===2) document.body.classList.add('font-dyslexic');
+  const lbl = document.getElementById('font-label-m');
+  if (lbl) lbl.textContent = FONT_LABELS[fontIdx];
+  const sel = document.getElementById('font-select');
+  if (sel) sel.value = fontIdx;
+  localStorage.setItem('luminary_font', fontIdx);
+}
+function setFontIndex(idx) { fontIdx = parseInt(idx); applyFont(); }
+function cycleFont() { fontIdx = (fontIdx+1)%FONTS.length; applyFont(); }
+
+// ══════════════════════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════════════════════
+function setChunkSize(size) {
+  chunkSize = parseInt(size);
+  localStorage.setItem('luminary_chunk_size', chunkSize);
+  showToast(`Chunk: ${chunkSize} word${chunkSize>1?'s':''}`);
+  if (currentStoryId) { regenerateChunkWords(); renderCaption(); }
+}
+function setOrpStyle(style) {
+  orpStyle = style;
+  localStorage.setItem('luminary_orp_style', orpStyle);
+  document.getElementById('orp-wrap').classList.toggle('neutral-rsvp', orpStyle==='neutral');
+  if (currentStoryId) renderCaption();
+}
+function setDelayIntensity(v) { delayIntensity = v; localStorage.setItem('luminary_delay_intensity', v); }
+
+// ══════════════════════════════════════════════════════════════════
+//  ZEN MODE
+// ══════════════════════════════════════════════════════════════════
+function toggleZenMode() {
+  zenMode = !zenMode;
+  document.getElementById('main').classList.toggle('zen-mode-active', zenMode);
+  showToast(zenMode ? 'Zen mode — tap exit or press Esc' : 'Zen mode exited');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SPEED / WPM
+// ══════════════════════════════════════════════════════════════════
+function sliderToWPM(v) {
+  return Math.round(Math.exp(Math.log(60) + (v-1)/99*(Math.log(900)-Math.log(60))));
+}
+function getDelay() {
+  return Math.round(60000 / sliderToWPM(parseInt(document.getElementById('speed-range').value)) * 10);
+}
+function getWordDelay() {
+  return Math.round(60000 / sliderToWPM(parseInt(document.getElementById('speed-range').value)));
+}
+function getPunctMultiplier(word) {
+  if (delayIntensity==='off' || !word) return 1;
+  const f = delayIntensity==='long' ? 1.6 : 1.0;
+  if (/[.!?…]$/.test(word)) return 2.2*f;
+  if (/[,;—–]/.test(word)) return 1.5*f;
+  return 1;
+}
+function updateWPMDisplay() {
+  const wpm = sliderToWPM(parseInt(document.getElementById('speed-range').value));
+  document.getElementById('wpm-val').textContent = wpm + ' wpm';
+  const el = document.getElementById('speed-range');
+  document.getElementById('pace-val').textContent = wpm + ' wpm';
+  updateTimeRemaining();
+}
+function updateTimeRemaining() {
+  if (!currentStoryId) return;
+  const wpm = sliderToWPM(parseInt(document.getElementById('speed-range').value));
+  let remaining;
+  if (wordMode) remaining = (words.length - wordIdx) * chunkSize;
+  else { const frac = sentences.length>1 ? (sentences.length-cursor)/sentences.length : 1; remaining = Math.round(words.length*chunkSize*frac); }
+  const mins = remaining/wpm;
+  document.getElementById('time-remaining').textContent = mins<1 ? '< 1 min left' : Math.ceil(mins)+'min left';
+}
+function onPaceChange(el) {
+  const v = parseInt(el.value);
+  el.style.setProperty('--pct', ((v-1)/99*100).toFixed(1)+'%');
+  updateWPMDisplay();
+  if (playing) { clearTimeout(playTimer); clearTimeout(wordTimer); wordMode ? runWordPlay() : runSentPlay(); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  TEXT PARSING
+// ══════════════════════════════════════════════════════════════════
+function parseSentences(text) {
+  return text.match(/[^.!?…]+[.!?…]+["']?/g)?.map(s=>s.trim()).filter(Boolean) || text.split('\n').filter(Boolean);
+}
+function parseChapters(text) {
+  const chRx = /^(chapter\s+[\w\d]+[\s:—–-]*.*?)$/im;
+  const blocks = text.split(/\n{2,}/);
+  const chs = []; let sentIdx = 0;
+  for (const block of blocks) {
+    const trimmed = block.trim(); if (!trimmed) continue;
+    const sents = parseSentences(trimmed);
+    if (chRx.test(trimmed)) chs.push({ title: trimmed.slice(0,60), startIdx: sentIdx });
+    sentIdx += sents.length;
+  }
+  if (chs.length < 2) {
+    const total = parseSentences(text).length;
+    if (total > 50) {
+      const step = Math.max(20, Math.floor(total/5)), result = [];
+      for (let i=0; i<total; i+=step) result.push({ title:'Part '+(result.length+1), startIdx:i });
+      return result;
+    }
+    return [];
+  }
+  return chs;
+}
+function updateChapterLabel() {
+  if (!chapters.length) {
+    document.getElementById('chapter-label').textContent = wordMode ? `Word RSVP (${chunkSize}w)` : 'Reading Focus';
+    return;
+  }
+  let idx = 0;
+  for (let i=chapters.length-1; i>=0; i--) { if (cursor>=chapters[i].startIdx) { idx=i; break; } }
+  currentChapterIdx = idx;
+  document.getElementById('chapter-label').textContent = chapters[idx]?.title || 'Reading';
+  document.querySelectorAll('.ch-item').forEach((el,i) => el.classList.toggle('active',i===idx));
+}
+function renderChapterDrawer() {
+  const drawer = document.getElementById('chapter-drawer');
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  const existing = document.querySelector('.ch-toggle');
+  if (existing) existing.remove();
+  if (chapters.length < 2) { drawer.classList.remove('open'); return; }
+  const toggle = document.createElement('button');
+  toggle.className = 'ch-toggle';
+  toggle.innerHTML = `<span>Chapters (${chapters.length})</span><span class="ch-toggle-arrow">▾</span>`;
+  toggle.onclick = () => { drawer.classList.toggle('open'); toggle.classList.toggle('open'); };
+  drawer.parentNode.insertBefore(toggle, drawer);
+  chapters.forEach((ch, i) => {
+    const item = document.createElement('div');
+    item.className = 'ch-item' + (i===currentChapterIdx?' active':'');
+    item.textContent = ch.title;
+    item.onclick = () => { stopPlay(); cursor=ch.startIdx; renderCaption(); savePos(); if (window.innerWidth<=640) closeSidebar(); };
+    list.appendChild(item);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  if (window.innerWidth<=640) {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sidebar-overlay');
+    if (sb.classList.contains('open')) closeSidebar();
+    else { sb.classList.add('open'); ov.classList.add('show'); }
+  } else {
+    sidebarOpen = !sidebarOpen;
+    document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
+  }
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+function toggleSettingsDrawer() {
+  settingsDrawerOpen = !settingsDrawerOpen;
+  document.getElementById('settings-drawer').classList.toggle('open', settingsDrawerOpen);
+}
+function toggleQuickPanel() {
+  const panel = document.getElementById('quick-panel');
+  panel.classList.toggle('open');
+  document.getElementById('desktop-settings-btn')?.classList.toggle('active', panel.classList.contains('open'));
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  STORY LOADER
+// ══════════════════════════════════════════════════════════════════
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderSidebar() {
+  const el = document.getElementById('stories-list');
+  el.innerHTML = '';
+  stories.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'story-item' + (s.id===currentStoryId?' active':'');
+    const totalSents = parseSentences(s.text).length;
+    const pct = totalSents>1 && s.savedCursor ? Math.round((s.savedCursor/(totalSents-1))*100) : 0;
+    item.innerHTML = `
+      <div class="s-title">${escHtml(s.title)}</div>
+      <div class="s-meta">${escHtml(s.author||'Unknown')}</div>
+      <div class="s-progress"><div class="s-prog-fill" style="width:${pct}%"></div></div>
+      <button class="s-del" onclick="confirmDelete('${s.id}',event)" title="Remove">×</button>`;
+    item.addEventListener('click', () => { loadStory(s.id); if (window.innerWidth<=640) closeSidebar(); });
+    el.appendChild(item);
+  });
+}
+function loadStory(id) {
+  stopPlay(); currentStoryId = id;
+  const story = stories.find(s => s.id===id); if (!story) return;
+  document.getElementById('book-title').textContent = `${story.title}  ·  ${story.author||'Unknown'}`;
+  sentences = parseSentences(story.text);
+  regenerateChunkWords();
+  cursor = story.savedCursor || 0;
+  wordIdx = story.savedWordIdx || 0;
+  chapters = parseChapters(story.text);
+  document.getElementById('empty-state').style.display = 'none';
+  const cw = document.getElementById('caption-wrap');
+  cw.style.display = 'flex'; cw.style.flexDirection = 'column'; cw.style.alignItems = 'center';
+  renderChapterDrawer(); renderCaption(); renderSidebar(); updateTimeRemaining();
+}
+function regenerateChunkWords() {
+  const story = stories.find(s => s.id===currentStoryId); if (!story) return;
+  const base = story.text.replace(/\n+/g,' ').split(/\s+/).filter(Boolean);
+  words = [];
+  for (let i=0; i<base.length; i+=chunkSize) words.push(base.slice(i,i+chunkSize).join(' '));
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ORP CALCULATION
+// ══════════════════════════════════════════════════════════════════
+function getORPIndex(word) {
+  const c = word.replace(/[^a-zA-Z]/g,'');
+  if (c.length<=1) return 0;
+  if (c.length<=5) return 1;
+  if (c.length<=9) return 2;
+  return 3;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════════════
+function renderCaption() {
+  if (wordMode) { renderWordMode(); return; }
+  document.getElementById('orp-wrap').style.display = 'none';
+  document.getElementById('caption-box').style.display = 'flex';
+  const prev = document.getElementById('line-prev');
+  const curr = document.getElementById('line-current');
+  const next = document.getElementById('line-next');
+  prev.textContent = cursor>0 ? sentences[cursor-1] : '';
+  curr.innerHTML = '';
+  curr.classList.remove('caption-fresh'); void curr.offsetWidth; curr.classList.add('caption-fresh');
+  const sentence = sentences[cursor] || '';
+  sentence.split(' ').forEach((w,i) => {
+    const span = document.createElement('span');
+    span.className = 'word'; span.textContent = (i===0?'':' ')+w;
+    curr.appendChild(span);
+  });
+  next.textContent = cursor<sentences.length-1 ? sentences[cursor+1] : '';
+  const pct = sentences.length>1 ? (cursor/(sentences.length-1))*100 : 100;
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-scrub-handle').style.left = pct+'%';
+  document.getElementById('counter').textContent = `${cursor+1} / ${sentences.length}`;
+  updateChapterLabel(); updateTimeRemaining(); updateAmbientGlow(sentence);
+}
+function renderWordMode() {
+  const w = words[wordIdx] || '';
+  document.getElementById('caption-box').style.display = 'none';
+  const ow = document.getElementById('orp-wrap');
+  ow.style.display = 'flex';
+  ow.classList.remove('caption-fresh'); void ow.offsetWidth; ow.classList.add('caption-fresh');
+  if (orpStyle==='classic' && chunkSize===1) {
+    const idx = getORPIndex(w);
+    document.getElementById('orp-before').textContent = w.slice(0, idx);
+    document.getElementById('orp-letter').textContent = w[idx] || '';
+    document.getElementById('orp-after').textContent  = w.slice(idx+1);
+  } else {
+    // Neutral or multi-chunk: center entire text
+    const mid = Math.floor(w.length/2);
+    document.getElementById('orp-before').textContent = w.slice(0, mid);
+    document.getElementById('orp-letter').textContent = chunkSize===1 ? (w[mid]||'') : '';
+    document.getElementById('orp-after').textContent  = chunkSize===1 ? w.slice(mid+1) : w;
+    if (chunkSize>1) {
+      document.getElementById('orp-before').textContent = '';
+      document.getElementById('orp-letter').textContent = '';
+      document.getElementById('orp-after').textContent  = w;
+    }
+  }
+  const ctx = 5;
+  document.getElementById('line-prev').textContent = words.slice(Math.max(0,wordIdx-ctx),wordIdx).join(' ');
+  document.getElementById('line-current').innerHTML = '';
+  document.getElementById('line-next').textContent = words.slice(wordIdx+1,wordIdx+1+ctx).join(' ');
+  const pct = words.length>1 ? (wordIdx/(words.length-1))*100 : 100;
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-scrub-handle').style.left = pct+'%';
+  document.getElementById('counter').textContent = `${wordIdx+1} / ${words.length}`;
+  document.getElementById('chapter-label').textContent = `Word RSVP (${chunkSize}w)`;
+  updateTimeRemaining(); updateAmbientGlow(w);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PLAYBACK ENGINE
+// ══════════════════════════════════════════════════════════════════
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+function startPlay() {
+  playing = true; updatePlayBtn();
+  document.getElementById('stage').classList.add('playing-active');
+  wordMode ? runWordPlay() : runSentPlay();
+}
+function stopPlay() {
+  playing = false; clearTimeout(playTimer); clearTimeout(wordTimer); updatePlayBtn(); savePos();
+  document.getElementById('stage').classList.remove('playing-active');
+}
+function runSentPlay() {
+  if (!playing) return;
+  if (cursor >= sentences.length-1) { stopPlay(); return; }
+  cursor++; renderCaption();
+  playTimer = setTimeout(runSentPlay, getDelay());
+}
+function runWordPlay() {
+  if (!playing) return;
+  if (wordIdx >= words.length-1) { stopPlay(); return; }
+  wordIdx++; renderWordMode();
+  const delay = getWordDelay() * getPunctMultiplier(words[wordIdx]);
+  wordTimer = setTimeout(runWordPlay, delay);
+}
+function updatePlayBtn() {
+  document.getElementById('play-icon').innerHTML = playing
+    ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+    : '<polygon points="6,4 20,12 6,20"/>';
+}
+function stepForward() {
+  stopPlay();
+  if (wordMode) { if (wordIdx<words.length-1) { wordIdx++; renderWordMode(); } }
+  else { if (cursor<sentences.length-1) { cursor++; renderCaption(); } }
+  savePos();
+}
+function stepBack() {
+  stopPlay();
+  if (wordMode) { if (wordIdx>0) { wordIdx--; renderWordMode(); } }
+  else { if (cursor>0) { cursor--; renderCaption(); } }
+  savePos();
+}
+function restartReader() {
+  stopPlay(); cursor=0; wordIdx=0;
+  if (currentStoryId) { renderCaption(); savePos(); }
+}
+function toggleMode() {
+  stopPlay(); wordMode = !wordMode;
+  const btn = document.getElementById('mode-btn');
+  btn.textContent = wordMode ? 'Sent.' : 'Word';
+  btn.classList.toggle('active-btn', wordMode);
+  if (currentStoryId) renderCaption();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PROGRESS BAR SCRUBBING
+// ══════════════════════════════════════════════════════════════════
+document.getElementById('progress-bar').addEventListener('click', function(e) {
+  if (!currentStoryId) return;
+  const r = this.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width));
+  stopPlay();
+  if (wordMode) { wordIdx=Math.round(pct*(words.length-1)); renderWordMode(); }
+  else { cursor=Math.round(pct*(sentences.length-1)); renderCaption(); }
+  savePos();
+});
+document.getElementById('progress-bar').addEventListener('touchstart', function(e) {
+  if (!currentStoryId) return;
+  e.preventDefault();
+  const r = this.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.touches[0].clientX-r.left)/r.width));
+  stopPlay();
+  if (wordMode) { wordIdx=Math.round(pct*(words.length-1)); renderWordMode(); }
+  else { cursor=Math.round(pct*(sentences.length-1)); renderCaption(); }
+  savePos();
+}, { passive: false });
+
+// ══════════════════════════════════════════════════════════════════
+//  AI FEATURES
+// ══════════════════════════════════════════════════════════════════
+function openDrawer() { document.getElementById('summary-drawer').classList.add('open'); }
+function closeDrawer() { document.getElementById('summary-drawer').classList.remove('open'); }
+
+function markdownToHtml(text) {
+  return text
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/#{1,3} (.*?)(?:<br>|$)/g, '<h4>$1</h4>')
+    .replace(/- (.*?)(?:<br>|$)/g, '<li>$1</li>');
+}
+
+async function triggerAISummary() {
+  if (!currentStoryId) { showToast('Please load a story first'); return; }
+  const story = stories.find(s => s.id===currentStoryId);
+  openDrawer();
+  document.getElementById('drawer-title-label').innerHTML = `AI Summary <span class="ai-badge">Flash 2.5</span>`;
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p style="font-family:var(--font-ui);font-size:10px;text-transform:uppercase;color:var(--text3);letter-spacing:0.2em">Analyzing with Gemini…</p>
+    </div>`;
+  const prompt = `Synthesize a structured executive summary of the story titled "${story.title}" by ${story.author||'Unknown'}. Structure with brief headings:
+- 📌 CORE SYNOPSIS (maximum 3 scannable sentences)
+- 🎭 CHARACTERS & THEMES
+- 💎 CRITICAL LITERARY TAKEAWAYS
+Keep it fast and highly legible for a speed reader. Story text:\n\n${story.text}`;
+  try {
+    const raw = await callGemini(prompt, false);
+    const text = raw.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Empty AI response.');
+    document.getElementById('drawer-body').innerHTML = `<div style="font-family:var(--font-body);font-size:15px;color:var(--text);line-height:1.65">${markdownToHtml(text)}</div>`;
+  } catch(err) {
+    document.getElementById('drawer-body').innerHTML = `<p style="color:#ff3b30;font-family:var(--font-ui);font-size:10px;letter-spacing:0.1em">Error: ${escHtml(err.message)}</p>`;
+  }
+}
+
+async function triggerAIQuiz() {
+  if (!currentStoryId) { showToast('Please load a story first'); return; }
+  const story = stories.find(s => s.id===currentStoryId);
+  openDrawer();
+  document.getElementById('drawer-title-label').innerHTML = `Comprehension Quiz <span class="ai-badge">Gemini</span>`;
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p style="font-family:var(--font-ui);font-size:10px;text-transform:uppercase;color:var(--text3);letter-spacing:0.2em">Generating questions…</p>
+    </div>`;
+  const prompt = `Generate exactly 3 multiple-choice comprehension questions testing memory and fine details of: "${story.title}". One question must target a subtle specific detail to prove deep speed-reading retention. Return only valid JSON:\n{"questions":[{"question":"...","options":["A","B","C","D"],"correctIndex":0}]}\n\nStory:\n${story.text}`;
+  try {
+    const raw = await callGemini(prompt, true);
+    let txt = raw.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!txt) throw new Error('Empty AI response.');
+    txt = txt.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const data = JSON.parse(txt);
+    renderQuizUI(data.questions);
+  } catch(err) {
+    document.getElementById('drawer-body').innerHTML = `<p style="color:#ff3b30;font-family:var(--font-ui);font-size:10px;letter-spacing:0.1em">Error: ${escHtml(err.message)}</p>`;
+  }
+}
+
+function renderQuizUI(questions) {
+  const body = document.getElementById('drawer-body');
+  body.innerHTML = '';
+  questions.forEach((q, qi) => {
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+    card.innerHTML = `<div class="quiz-q-num">Question ${qi+1}</div><div class="quiz-q-text">${escHtml(q.question)}</div>`;
+    const opts = document.createElement('div');
+    q.options.forEach((opt, oi) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = opt;
+      btn.onclick = () => {
+        opts.querySelectorAll('.quiz-option').forEach(b => b.disabled = true);
+        if (oi===q.correctIndex) { btn.classList.add('correct'); showToast('Correct! 🎉'); }
+        else { btn.classList.add('wrong'); opts.querySelectorAll('.quiz-option')[q.correctIndex].classList.add('correct'); showToast('Incorrect — review the text.'); }
+      };
+      opts.appendChild(btn);
+    });
+    card.appendChild(opts);
+    body.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  UPLOAD MODAL
+// ══════════════════════════════════════════════════════════════════
+function openModal() {
+  ['inp-title','inp-author','inp-text'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('file-parsed-preview').style.display='none';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('inp-title').focus(), 150);
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('modal-overlay')) closeModal(); });
+
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) { document.getElementById('inp-text').value=text; showToast('Pasted ✦'); }
+  } catch { showToast('Paste blocked — use Ctrl/Cmd+V'); }
+}
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) { e.preventDefault(); onDragLeave(); const f=e.dataTransfer.files[0]; if(f) readFile(f); }
+function onFileSelect(e) { const f=e.target.files[0]; if(f) readFile(f); }
+
+function readFile(file) {
+  const reader = new FileReader();
+  if (file.name.endsWith('.epub')) {
+    reader.onload = evt => {
+      let raw = evt.target.result;
+      // Strip binary sequences, OPF XML headers, and zip indicators
+      raw = raw.replace(/PK[\x00-\x08][\x00-\xFF]/g,'').replace(/<\?xml[^>]*\?>/g,'');
+      // Extract paragraph & heading text
+      const pMatches = [...raw.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)].map(m=>m[1]);
+      const hMatches = [...raw.matchAll(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi)].map(m=>m[1]);
+      let clean = [...pMatches,...hMatches].join('\n').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+      if (clean.length < 50) clean = "EPUB has compressed/binary contents. Please paste the text directly or use a .txt/.html version.";
+      document.getElementById('inp-text').value = clean;
+      document.getElementById('inp-title').value = file.name.replace(/\.[^.]+$/,'');
+      document.getElementById('epub-snippet').textContent = clean.slice(0,300)+'...';
+      document.getElementById('file-parsed-preview').style.display='block';
+      showToast('EPUB ingested 📖');
+    };
+    reader.readAsText(file);
+  } else {
+    reader.onload = evt => {
+      let text = evt.target.result;
+      if (file.name.endsWith('.html')||file.name.endsWith('.htm')) {
+        const div = document.createElement('div');
+        // Strip scripts and styles before extracting text
+        text = text.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'');
+        div.innerHTML = text;
+        text = div.innerText;
+      }
+      text = text.trim();
+      document.getElementById('inp-text').value = text;
+      if (!document.getElementById('inp-title').value) document.getElementById('inp-title').value = file.name.replace(/\.[^.]+$/,'');
+      document.getElementById('epub-snippet').textContent = text.slice(0,300)+'...';
+      document.getElementById('file-parsed-preview').style.display='block';
+      showToast('File loaded ✦');
+    };
+    reader.readAsText(file);
+  }
+}
+
+function saveStory() {
+  const title = document.getElementById('inp-title').value.trim();
+  const author = document.getElementById('inp-author').value.trim();
+  const text = document.getElementById('inp-text').value.trim();
+  if (!title || !text) { showToast('Please enter a title and story text.'); return; }
+  const story = { id:'s'+Date.now(), title, author, text };
+  stories.push(story); save(); closeModal(); renderSidebar(); loadStory(story.id);
+  showToast('Story saved ✦');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DELETE CONFIRM (no alert())
+// ══════════════════════════════════════════════════════════════════
+let pendingDeleteId = null;
+function confirmDelete(id, e) {
+  e.stopPropagation();
+  pendingDeleteId = id;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() {
+  pendingDeleteId = null;
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+document.getElementById('confirm-del-btn').onclick = () => {
+  if (!pendingDeleteId) return;
+  stories = stories.filter(s => s.id!==pendingDeleteId);
+  save();
+  if (currentStoryId===pendingDeleteId) {
+    currentStoryId=null; stopPlay();
+    document.getElementById('empty-state').style.display='';
+    document.getElementById('caption-wrap').style.display='none';
+    document.getElementById('book-title').textContent='—';
+    document.getElementById('wpm-val').textContent='— wpm';
+    document.getElementById('time-remaining').textContent='—';
+  }
+  renderSidebar(); closeConfirm(); showToast('Story removed');
+};
+document.getElementById('confirm-overlay').addEventListener('click', e => { if (e.target===document.getElementById('confirm-overlay')) closeConfirm(); });
+
+// ══════════════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+  if (e.code==='Space') { e.preventDefault(); if (currentStoryId) togglePlay(); }
+  if (e.code==='ArrowRight') stepForward();
+  if (e.code==='ArrowLeft') stepBack();
+  if (e.code==='Escape') {
+    if (zenMode) toggleZenMode();
+    closeDrawer(); closeModal(); closeConfirm();
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  TOUCH SWIPE GESTURES
+// ══════════════════════════════════════════════════════════════════
+let txStart=0, tyStart=0;
+document.getElementById('stage').addEventListener('touchstart', e => {
+  txStart = e.touches[0].clientX; tyStart = e.touches[0].clientY;
+}, { passive: true });
+document.getElementById('stage').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - txStart;
+  const dy = e.changedTouches[0].clientY - tyStart;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) { dx < 0 ? stepForward() : stepBack(); }
+}, { passive: true });
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+(function init() {
+  // Speed slider init
+  const el = document.getElementById('speed-range');
+  const v = parseInt(el.value);
+  el.style.setProperty('--pct', ((v-1)/99*100).toFixed(1)+'%');
+  updateWPMDisplay();
+
+  // Apply stored preferences
+  applyTheme(); applyFont();
+  document.getElementById('chunk-select').value = chunkSize;
+  document.getElementById('orp-style-select').value = orpStyle;
+  document.getElementById('delay-intensity').value = delayIntensity;
+  if (orpStyle==='neutral') document.getElementById('orp-wrap').classList.add('neutral-rsvp');
+
+  // Initial glow
+  updateAmbientGlow('');
+  // Show first story
+  if (stories.length) loadStory(stories[0].id);
+  renderSidebar();
+})();
+</script>
+</body>
+</html>
